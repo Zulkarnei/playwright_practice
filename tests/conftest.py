@@ -2,13 +2,22 @@ import pytest
 from playwright.sync_api import sync_playwright
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--headless",
+        action="store_true",
+        default=False,
+        help="Run browser in headless mode"
+    )
+
+
 @pytest.fixture(scope="session")
-def browser():
+def browser(pytestconfig):
+    headless = pytestconfig.getoption("headless")
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
+        browser = p.chromium.launch(headless=headless)
         context = browser.new_context()
-        page = context.new_page()
-        yield page
+        yield context
         context.close()
         browser.close()
 
@@ -16,4 +25,7 @@ def browser():
 @pytest.fixture(scope="session")
 def setup(browser):
     base_url = "http://uitestingplayground.com/sampleapp"
-    browser.goto(base_url)
+    page = browser.new_page()
+    page.goto(base_url)
+    yield page
+    page.close()
